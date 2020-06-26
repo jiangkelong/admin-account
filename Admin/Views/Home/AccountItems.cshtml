@@ -1,0 +1,219 @@
+﻿
+@{
+    ViewBag.Title = "账目流水";
+}
+<div id="app" class="MainContainer">
+    <el-form v-bind:inline="true" v-bind:model="pageParm" class="demo-form-inline">
+        <el-form-item label="会员编号" label-width="70px">
+            <el-input v-model="pageParm.MemberNo" clearable></el-input>
+        </el-form-item>
+        <el-form-item label="会员名称" label-width="70px">
+            <el-input v-model="pageParm.MemberName" clearable></el-input>
+        </el-form-item>
+        <el-form-item label="操 作 人" label-width="70px">
+            <el-input v-model="pageParm.MakeMan" clearable></el-input>
+        </el-form-item>
+        <div>
+            <el-form-item label="类 型" label-width="70px">
+                <el-select v-model="pageParm.Type">
+                    <el-option label="全部" value="全部"></el-option>
+                    <el-option label="充值" value="充值"></el-option>
+                    <el-option label="收款" value="收款"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="日 期" label-width="70px">
+                <el-date-picker type="date" v-model="pageParm.BeginDate" value-format="yyyy-MM-dd" placeholder="选择起始日期"></el-date-picker>
+            </el-form-item>
+            <el-form-item label="至" label-width="70px">
+                <el-date-picker type="date" v-model="pageParm.EndDate" value-format="yyyy-MM-dd" placeholder="选择结束日期"></el-date-picker>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" size="small" @@click="handleQuery">查 询</el-button>
+                <el-button type="primary" size="small" @@click="handleExport">导 出</el-button>
+            </el-form-item>
+        </div>
+    </el-form>
+    <el-table v-bind:data="page.Items"
+              v-loading="loading"
+              border
+              highlight-current-row
+              style="width: 100%"
+              v-bind:max-height="screenHeight">
+        <el-table-column label="类 型">
+            <template slot-scope="scope">
+                <span v-bind:style="{color:scope.row.Type=='充值'?'green':'red'}">
+                    {{scope.row.Type}}
+                </span>
+            </template>
+        </el-table-column>
+        <el-table-column prop="MakeMan"
+                         label="操作人">
+        </el-table-column>
+        <el-table-column prop="MemberNo"
+                         label="会员编号">
+        </el-table-column>
+        <el-table-column prop="MemberName"
+                         label="会员名称">
+        </el-table-column>
+        <el-table-column label="额 度">
+            <template slot-scope="scope">
+                <div v-bind:style="{color:scope.row.Type=='充值'?'green':'red'}">
+                    <div v-if="scope.row.Money!=0">{{scope.row.Type=='充值'?'+':''}}{{scope.row.Money}} 元</div>
+                    <div v-if="scope.row.Num!=0">{{scope.row.Type=='充值'?'+':''}}{{scope.row.Num}} 桶</div>
+                </div>
+            </template>
+        </el-table-column>
+        <el-table-column prop="CreatedOn"
+                         label="时间">
+        </el-table-column>
+    </el-table>
+    <div class="paginationBlock">
+        <el-pagination @@size-change="handleSizeChange"
+                       @@current-change="handleCurrentChange"
+                       v-bind:current-page="pageParm.CurrentPage"
+                       v-bind:page-sizes="pageSizes"
+                       v-bind:page-size="pageParm.limit"
+                       layout="total, sizes, prev, pager, next, jumper"
+                       v-bind:total="page.TotalItems">
+        </el-pagination>
+    </div>
+    @*<el-dialog v-bind:title="dialogTitle" v-bind:visible.sync="dialogFormVisible">
+            <el-form status-icon v-bind:rules="rules" ref="ruleForm" v-bind:model="place">
+                <el-form-item label="车位编号" label-width="80px" prop="PlaceNo">
+                    <el-input v-model="place.PlaceNo" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="尺 寸" label-width="80px">
+                    <el-input v-model="place.Size" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="状 态" label-width="80px">
+                    <el-select v-model="place.Status" placeholder="请选择">
+                        <el-option label="未售" value="未售"></el-option>
+                        <el-option label="已售" value="已售"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="备 注" label-width="80px">
+                    <el-input type="textarea" v-model="place.PMemo"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @@click="dialogFormVisible = false">取 消</el-button>
+                <el-button type="primary" @@click="save">提 交</el-button>
+            </div>
+        </el-dialog>*@
+</div>
+@section Scripts{
+    <script>
+        //var temp = { PlaceID: 0, DistrictID: null, PlaceNo: null, Size: null, Status: "未售", PMemo: null };
+        var app = new Vue({
+            el: "#app",
+            data: {
+                loading: true,
+                //place: JSON.parse(JSON.stringify(temp)),//临时对象
+                currentIndex: null,//当前行索引
+                dialogFormVisible: false,
+                action: 'add',
+                page: [],
+                pageSizes: [30, 50, 100],
+                pageParm: { CurrentPage: 1, Limit: 30, MemberNo: null, MemberName: null, MakeMan: null, Type: "全部", BeginDate: null, EndDate: null },
+                //rules: {//表单验证规则
+                //    DistrictID: [
+                //        { required: true, message: '请选择小区', trigger: 'change' }
+                //    ],
+                //    PlaceNo: [
+                //        { required: true, message: '请输入车位编号', trigger: 'blur' },
+                //    ]
+                //},
+                screenHeight: document.body.clientHeight - 180
+            },
+            created: function () {
+                this.getPageList();
+            },
+            mounted: function () {
+                window.onresize = () => {
+                    return (() => {
+                        this.screenHeight = document.body.clientHeight - 180
+                    })()
+                }
+            },
+            computed: {
+                dialogTitle: function () {
+                    return this.action === 'add' ? '新 增' : '修 改';
+                }
+            },
+            methods: {
+                getPageList: function () {
+                    this.loading = true;
+                    this.$http.post('/api/Weapp/GetChargeLogList', this.pageParm)
+                        .then(function (response) {
+                            app.page = response.data.data;
+                            setTimeout(() => {
+                                app.loading = false;
+                            }, 800);
+                        })
+                        .catch(function (error) {
+
+                        })
+                },
+                handleSizeChange(val) {
+                    this.pageParm.limit = val;
+                    this.pageParm.CurrentPage = 1;
+                    this.getPageList();
+                },
+                handleCurrentChange(val) {
+                    this.pageParm.CurrentPage = val;
+                    this.getPageList();
+                },
+                handleQuery() {
+                    this.pageParm.CurrentPage = 1;
+                    this.getPageList();
+                },
+                handleExport() {
+                    var loading = this.$loading({
+                        lock: true,
+                        background: 'rgba(255, 255, 255, 0.5)'
+                    });
+                    this.$http.post('/api/FileHandler/ExportAccountItems', this.pageParm,
+                        {
+                            responseType: 'blob', //返回数据的格式，可选值为arraybuffer,blob,document,json,text,stream，默认值为json
+                        })
+                        .then(res => {
+                            //从headers获取文件名
+                            var fileName = res.headers["content-disposition"].split(";")[1].split("filename=")[1];
+                            var fileNameUnicode = res.headers["content-disposition"].split("filename*=")[1];
+                            if (fileNameUnicode) {//当存在 filename* 时，取filename* 并进行解码（为了解决中文乱码问题）
+                                fileName = decodeURIComponent(fileNameUnicode.split("''")[1]);
+                            }
+                            //这里res.data是返回的blob对象
+                            var blob = new Blob([res.data], {
+                                type: 'application/vnd.ms-excel;charset=utf-8'
+                            })
+                            // 针对于IE浏览器的处理, 因部分IE浏览器不支持createObjectURL
+                            if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                                window.navigator.msSaveOrOpenBlob(blob, fileName)
+                            } else {
+                                var downloadElement = document.createElement('a')
+                                var href = window.URL.createObjectURL(blob) // 创建下载的链接
+                                downloadElement.href = href
+                                downloadElement.download = fileName // 下载后文件名
+                                document.body.appendChild(downloadElement)
+                                downloadElement.click() // 点击下载
+                                document.body.removeChild(downloadElement) // 下载完成移除元素
+                                window.URL.revokeObjectURL(href) // 释放掉blob对象
+                            }
+                            setTimeout(() => {
+                                loading.close();
+                            }, 1000);
+                        })
+                        .catch(function (error) {
+                            loading.close();
+                        })
+                }
+            }
+        })
+    </script>
+}
+
+
+
+
+

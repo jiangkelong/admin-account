@@ -1,0 +1,176 @@
+﻿
+@{
+    ViewBag.Title = "角色管理";
+}
+<div id="app" class="MainContainer">
+    <el-table v-bind:data="roleList"
+              border
+              highlight-current-row
+              style="width: 100%"
+              v-bind:max-height="screenHeight">
+        <el-table-column prop="RoleID"
+                         label="角色ID"
+                         width="120">
+        </el-table-column>
+        <el-table-column prop="RoleName"
+                         label="角色名称"
+                         width="200">
+        </el-table-column>
+        <el-table-column prop="CreatedOn"
+                         label="创建时间"
+                         width="200">
+        </el-table-column>
+        <el-table-column prop="Memo"
+                         label="说 明">
+        </el-table-column>
+        <el-table-column fixed="right"
+                         width="160">
+            <template slot="header" slot-scope="scope">
+                操 作&nbsp;
+                <el-button type="text" style="padding:0; font-size:18px;" title="新增" @@click="handleAdd">
+                    <i class="el-icon-circle-plus"></i>
+                </el-button>
+            </template>
+            <template slot-scope="scope">
+                <el-button size="mini"
+                           @@click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+                <el-button size="mini"
+                           type="danger"
+                           @@click="handleDelete(scope.$index, scope.row)">删除</el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+    <el-dialog v-bind:title="dialogTitle" v-bind:visible.sync="dialogFormVisible">
+        <el-form v-bind:model="tempRole">
+            <el-form-item label="角色名称" label-width="80px">
+                <el-input v-model="tempRole.RoleName" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="说 明" label-width="80px">
+                <el-input type="textarea" v-model="tempRole.Memo"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @@click="save">提 交</el-button>
+        </div>
+    </el-dialog>
+</div>
+@section Scripts{
+    <script>
+        var role = { RoleID: 0, RoleName: '', Memo: '' };
+        var app = new Vue({
+            el: "#app",
+            data: function () {
+                return {
+                    roleList: [],
+                    tempRole: JSON.parse(JSON.stringify(role)),//临时角色对象
+                    currentIndex: null,//当前行索引
+                    dialogFormVisible: false,
+                    action: 'add',
+                    screenHeight: document.body.clientHeight - 20
+                }
+            },
+            created: function () {
+                this.getList();
+            },
+            mounted: function () {
+                window.onresize = () => {
+                    return (() => {
+                        this.screenHeight = document.body.clientHeight - 20
+                    })()
+                }
+            },
+            computed: {
+                dialogTitle: function () {
+                    return this.action === 'add' ? '新增角色' : '修改角色';
+                }
+            },
+            methods: {
+                //获取列表
+                getList: function () {
+                    axios.post('/api/Role/GetList')
+                    .then(function (response) {
+                        app.roleList = response.data.data;
+                    })
+                    .catch(function (error) {
+
+                    })
+                },
+                handleAdd: function () {
+                    this.tempRole = JSON.parse(JSON.stringify(role));
+                    this.action = "add";
+                    this.dialogFormVisible = true;
+                },
+                handleEdit: function (index, row) {
+                    this.tempRole = JSON.parse(JSON.stringify(row));
+                    this.currentIndex = index;
+                    this.action = "modify";
+                    this.dialogFormVisible = true;
+                },
+                handleDelete: function (index, row) {
+                    this.$confirm('此操作将会影响与该角色相关的用户的正常使用，是否继续？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(function () {
+                        axios.post('/api/Role/Delete', { id: row.RoleID })
+                            .then(function (response) {
+                                var res = response.data;
+                                if (res.statusCode == 200) {
+                                    app.$message({
+                                        showClose: true,
+                                        message: '删除成功',
+                                        type: 'success'
+                                    });
+                                    app.roleList.splice(index, 1);//删除
+                                }
+                                else {
+                                    app.$message({
+                                        showClose: true,
+                                        message: res.message,
+                                        type: 'error'
+                                    });
+                                }
+                            })
+                    });
+                },
+                save: function () {
+                    if (this.tempRole.RoleName.trim() === "") {
+                        this.$message({
+                            showClose: true,
+                            message: '角色名称不能为空',
+                            type: 'warning'
+                        });
+                        return;
+                    }
+                    axios.post('/api/Role/Edit', this.tempRole)
+                        .then(function (response) {
+                            var res = response.data;
+                            if (res.statusCode == 200) {
+                                app.$message({
+                                    showClose: true,
+                                    message: '提交成功',
+                                    type: 'success'
+                                });
+                                if (app.action === 'add') {
+                                    app.roleList.unshift(res.data);//数组头部插入
+                                }
+                                else {
+                                    app.roleList.splice(app.currentIndex, 1, app.tempRole);//替换
+                                }
+                                app.dialogFormVisible = false;
+                            }
+                            else {
+                                app.$message({
+                                    showClose: true,
+                                    message: res.message,
+                                    type: 'error'
+                                });
+                            }
+                        })
+                }
+            }
+        })
+    </script>
+}
+

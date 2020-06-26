@@ -1,0 +1,82 @@
+﻿
+@{
+    ViewBag.Title = "批量添加会员";
+}
+<div id="app" class="MainContainer">
+    <div style="margin-top:20px;width:50%;">
+        <el-upload class="upload-demo"
+                   ref="upload"
+                   v-bind:action="upLoadUrl"
+                   v-bind:on-success="handleSuccess"
+                   v-bind:on-error="handleError"
+                   accept=".xls,.xlsx"
+                   v-bind:limit="1"
+                   v-bind:headers="headers"
+                   v-bind:file-list="fileList"
+                   v-bind:auto-upload="false">
+            <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
+            <el-button style="margin-left: 10px;" size="small" type="success" @@click="submitUpload">导入</el-button>
+            <el-button style="margin-left: 10px;" size="small" onclick="history.go(-1)">返回</el-button>
+            @*<div slot="tip" class="el-upload__tip">
+            每次上传一个文件，只能上传xls/xlsx文件，且不超过4M；
+            </div>*@
+        </el-upload>
+        <el-divider content-position="left">导入规范</el-divider>
+        <div style="color:red;">
+            <p>1、每次上传一个文件，只能上传 .xls/.xlsx 文件，且大小不超过 4M。</p>
+            <p>2、要严格遵照规定的格式制定，<a href="/Content/Template/批量添加会员模板.xlsx" download="批量添加会员模板">点击下载</a>模板。</p>
+            <p>3、只识别 Excel 文件中第一个工作表(sheet)，忽略其它。</p>
+            <p>4、第一行是表头，从第二行开始为数据行，表头单元格标题参照模板，数量要相符，名称不能有任何差异（包括空格和换行导致的差异），否则很可能会导致失败。</p>
+            <p>5、会员编号和名称为必填项，否则视为无效行。</p>
+            @*<p>6、金额相关的单元格格式设为数字，不要设为货币类型。</p>
+            <p>7、日期相关的单元格格式设为文本，不要设为日期类型，否则系统识别会出现差异，书写格式应为 yyyy-m-d 或 yyyy/m/d ，系统会解析成 yyyy-m-d格式，对于不符合日期格式的值会原样导入系统。</p>*@
+        </div>
+    </div>
+</div>
+@section Scripts{
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: {
+                upLoadUrl: baseURL + "/api/FileHandler/ImportNewMemberList",
+                fileList: [],
+                headers: { "userid": localStorage.getItem("userId") }
+            },
+            methods: {
+                submitUpload() {
+                    //手动上传文件列表
+                    this.$refs.upload.submit();
+                },
+                handleSuccess(response, file, fileList) {
+                    if (response.statusCode == 200) {
+                        this.$message({
+                            showClose: true,
+                            message: "成功导入" + response.message + "条数据",
+                            type: 'success'
+                        });
+                        setTimeout(() => {
+                            history.go(-1);
+                        }, 800)
+                    }
+                    else {
+                        this.$message({
+                            showClose: true,
+                            message: response.message,
+                            type: 'warning'
+                        });
+                    }
+                    //清空已上传的文件列表
+                    this.$refs.upload.clearFiles();
+                },
+                handleError(err, file, fileList) {
+                    console.log(err);
+                    this.$message({
+                        showClose: true,
+                        message: "导入失败",
+                        type: 'warning'
+                    });
+                },
+            }
+        })
+    </script>
+}

@@ -1,0 +1,349 @@
+﻿
+@{
+    ViewBag.Title = "系统日志";
+}
+
+@{
+    ViewBag.Title = "Mortgage";
+}
+<div id="app" class="MainContainer">
+    <el-form v-bind:inline="true" v-bind:model="query" class="demo-form-inline">
+        <el-form-item label="操作模块">
+            <el-select v-model="query.Block" clearable>
+                <el-option v-for="item in logBlockList"
+                           v-bind:key="item.value"
+                           v-bind:label="item.label"
+                           v-bind:value="item.value">
+                </el-option>
+            </el-select>
+        </el-form-item>
+        <el-form-item label="主键值">
+            <el-input v-model="query.KeyValue" clearable></el-input>
+        </el-form-item>
+        <el-form-item>
+            <el-button type="primary" size="small" @@click="handleQuery">查 询</el-button>
+        </el-form-item>
+    </el-form>
+    <el-table v-bind:data="page.Items"
+              v-loading="loading"
+              border
+              highlight-current-row
+              style="width: 100%"
+              v-bind:max-height="screenHeight">
+        <el-table-column type="expand">
+            <template slot-scope="scope">
+                <template v-if="scope.row.Block=='房源分布'&&scope.row.ActionDo.indexOf('楼栋')>-1">
+                    <el-form label-position="left" inline class="custom-table-expand" size="mini" label-width="150px">
+                        <el-form-item label="楼栋ID">
+                            <span>{{ scope.row.LogContentObj.BuildingID }}</span>
+                        </el-form-item>
+                        <el-form-item label="楼栋名称">
+                            <span>{{ scope.row.LogContentObj.BuildingName }}</span>
+                        </el-form-item>
+                        <el-form-item label="楼栋业态">
+                            <span>{{ scope.row.LogContentObj.BuildingType }}</span>
+                        </el-form-item>
+                        <el-form-item label="别 名">
+                            <span>{{ scope.row.LogContentObj.Alias }}</span>
+                        </el-form-item>
+                    </el-form>
+                </template>
+                <template v-else-if="scope.row.Block=='房源分布'&&scope.row.ActionDo.indexOf('住房')>-1">
+                    <el-form label-position="left" inline class="custom-table-expand" size="mini" label-width="150px">
+                        <el-form-item label="房源ID">
+                            <span>{{ scope.row.LogContentObj.HouseID }}</span>
+                        </el-form-item>
+                        <el-form-item label="房 号">
+                            <span>{{ scope.row.LogContentObj.HouseCode }}</span>
+                        </el-form-item>
+                        <el-form-item label="业 态">
+                            <span>{{ scope.row.LogContentObj.HouseType }}</span>
+                        </el-form-item>
+                        <el-form-item label="预售面积">
+                            <span>{{ scope.row.LogContentObj.YSArea }}</span>
+                        </el-form-item>
+                        <el-form-item label="实测面积">
+                            <span>{{ scope.row.LogContentObj.Area }}</span>
+                        </el-form-item>
+                        <el-form-item label="价 格">
+                            <span>{{ scope.row.LogContent.Price }}</span>
+                        </el-form-item>
+                        <el-form-item label="状 态">
+                            <span>{{ scope.row.LogContentObj.Status }}</span>
+                            <el-tooltip class="item" effect="dark" content="1：在售，2：已售，3：租赁，4：自持，5：保留，6：预留，7：物业用房，8：工程抵款，9：暂不推，10：其它用途" placement="top-start">
+                                <i class="el-icon-warning"></i>
+                            </el-tooltip>
+                        </el-form-item>
+                    </el-form>
+                </template>
+                <template v-else-if="scope.row.Block=='代理机构设置'">
+                    <el-form label-position="left" inline class="custom-table-expand" size="mini" label-width="150px">
+                        <el-form-item label="名 称">
+                            <span>{{ scope.row.LogContentObj.AgentName }}</span>
+                        </el-form-item>
+                        <el-form-item label="分 类">
+                            <span>{{ scope.row.LogContentObj.AgentType }}</span>
+                        </el-form-item>
+                        <el-form-item label="合同有效期">
+                            <span>{{ scope.row.LogContentObj.ContractLife }}</span>
+                        </el-form-item>
+                    </el-form>
+                </template>
+                <template v-else-if="scope.row.Block=='车位合同'">
+                    <el-form label-position="left" inline class="custom-table-expand" size="mini" label-width="150px">
+                        <el-form-item label="车位ID">
+                            <span>{{ scope.row.LogContentObj.PlaceID }}</span>
+                        </el-form-item>
+                        <el-form-item label="价 格">
+                            <span>{{ scope.row.LogContentObj.Price }}</span>
+                        </el-form-item>
+                        <el-form-item label="客户姓名">
+                            <span>{{ scope.row.LogContentObj.CustomerName }}</span>
+                        </el-form-item>
+                        <el-form-item label="身份证">
+                            <span>{{ scope.row.LogContentObj.IdentityCard }}</span>
+                        </el-form-item>
+                        <el-form-item label="回 款">
+                            <span>{{ scope.row.LogContentObj.ReceivedMoney }}</span>
+                        </el-form-item>
+                    </el-form>
+                </template>
+                <template v-else-if="scope.row.Block=='按揭办理'">
+                    <el-form label-position="left" inline class="custom-table-expand" size="mini" label-width="150px">
+                        <el-form-item label="合同ID">
+                            <span>{{ scope.row.LogContentObj.Contract_ID }}</span>
+                        </el-form-item>
+                        <el-form-item label="最大按揭比例">
+                            <span>{{ scope.row.LogContentObj.MortgageRatioMax }}</span>
+                        </el-form-item>
+                        <el-form-item label="产权类别">
+                            <span>{{ scope.row.LogContentObj.Kind }}</span>
+                        </el-form-item>
+                        <el-form-item label="按揭通知日期">
+                            <span>{{ scope.row.LogContentObj.NoticeMortgageDate }}</span>
+                        </el-form-item>
+                        <el-form-item label="银行审核日期">
+                            <span>{{ scope.row.LogContentObj.BankAuditDate }}</span>
+                        </el-form-item>
+                        <el-form-item label="银行审核结果">
+                            <span>{{ scope.row.LogContentObj.BankAuditResult }}</span>
+                        </el-form-item>
+                        <el-form-item label="按揭日期">
+                            <span>{{ scope.row.LogContentObj.MortgageDate }}</span>
+                        </el-form-item>
+                        <template v-if="scope.row.LogContentObj.Kind=='现房'">
+                            <el-form-item label="产证通知日期">
+                                <span>{{ scope.row.LogContentObj.NoticePledgeDate }}</span>
+                            </el-form-item>
+                            <el-form-item label="产证办理日期">
+                                <span>{{ scope.row.LogContentObj.PledgeDate }}</span>
+                            </el-form-item>
+                            <el-form-item label="抵押证通知日期">
+                                <span>{{ scope.row.LogContentObj.NoticePledgeDate }}</span>
+                            </el-form-item>
+                            <el-form-item label="抵押证办理日期">
+                                <span>{{ scope.row.LogContentObj.PledgeDate }}</span>
+                            </el-form-item>
+                        </template>
+                        <template v-else>
+                            <el-form-item label="预抵押证通知日期">
+                                <span>{{ scope.row.LogContentObj.NoticePledgeDateY }}</span>
+                            </el-form-item>
+                            <el-form-item label="预抵押证办理日期">
+                                <span>{{ scope.row.LogContentObj.PledgeDateY }}</span>
+                            </el-form-item>
+                        </template>
+                        <el-form-item label="放款日期">
+                            <span>{{ scope.row.LogContentObj.LoanDate }}</span>
+                        </el-form-item>
+                        <el-form-item label="放款机构一">
+                            <span>{{ scope.row.LogContentObj.LoanOrganization1 }}</span>
+                        </el-form-item>
+                        <el-form-item label="放款机构二">
+                            <span>{{ scope.row.LogContentObj.LoanOrganization2 }}</span>
+                        </el-form-item>
+                        <el-form-item label="备 注" style="width:60%;">
+                            <span>{{ scope.row.LogContentObj.MortgageMemo }}</span>
+                        </el-form-item>
+                    </el-form>
+                </template>
+                <template v-else-if="scope.row.Block=='来访登记'">
+                    <el-form label-position="left" inline class="custom-table-expand" size="mini" label-width="150px">
+                        <el-form-item label="VisitDate">
+                            <span>{{ scope.row.LogContentObj.CustomerName }}</span>
+                        </el-form-item>
+                        <el-form-item label="客户名称">
+                            <span>{{ scope.row.LogContentObj.CustomerName }}</span>
+                        </el-form-item>
+                        <el-form-item label="性 别">
+                            <span>{{ scope.row.LogContentObj.Six }}</span>
+                        </el-form-item>
+                        <el-form-item label="年 龄">
+                            <span>{{ scope.row.LogContentObj.Age }}</span>
+                        </el-form-item>
+                        <el-form-item label="电 话">
+                            <span>{{ scope.row.LogContentObj.Tel }}</span>
+                        </el-form-item>
+                        <el-form-item label="来访途径">
+                            <span>{{ scope.row.LogContentObj.AccessWay }}</span>
+                        </el-form-item>
+                        <el-form-item label="来访何处">
+                            <span>{{ scope.row.LogContentObj.VisitWhere }}</span>
+                        </el-form-item>
+                        <el-form-item label="客户身份">
+                            <span>{{ scope.row.LogContentObj.CustomerIdentity }}</span>
+                        </el-form-item>
+                        <el-form-item label="原地营地">
+                            <span>{{ scope.row.LogContentObj.Y_Addr }}</span>
+                        </el-form-item>
+                        <el-form-item label="主营品牌">
+                            <span>{{ scope.row.LogContentObj.Kind }}</span>
+                        </el-form-item>
+                        <el-form-item label="租赁用途">
+                            <span>{{ scope.row.LogContentObj.Purpose }}</span>
+                        </el-form-item>
+                        <el-form-item label="需求面积">
+                            <span>{{ scope.row.LogContentObj.Area }}</span>
+                        </el-form-item>
+                        <el-form-item label="来访人数">
+                            <span>{{ scope.row.LogContentObj.VisitorCount }}</span>
+                        </el-form-item>
+                        <el-form-item label="接 待 人">
+                            <span>{{ scope.row.LogContentObj.Receptionist }}</span>
+                        </el-form-item>
+                        <el-form-item label="备 注" style="width:90%;">
+                            <span>{{ scope.row.LogContentObj.Memo }}</span>
+                        </el-form-item>
+                    </el-form>
+                </template>
+                <template v-else>
+                    {{ scope.row.LogContent }}
+                </template>
+            </template>
+        </el-table-column>
+        <el-table-column prop="RealName"
+                         label="操作人">
+        </el-table-column>
+        <el-table-column prop="Block"
+                         label="操作模块">
+        </el-table-column>
+        <el-table-column prop="ActionDo"
+                         label="行 为">
+        </el-table-column>
+        <el-table-column prop="KeyName"
+                         label="主 键">
+        </el-table-column>
+        <el-table-column prop="KeyValue"
+                         label="主键值">
+        </el-table-column>
+        <el-table-column prop="CreatedOn"
+                         label="操作时间">
+        </el-table-column>
+    </el-table>
+    <div class="paginationBlock">
+        <el-pagination @@size-change="handleSizeChange"
+                       @@current-change="handleCurrentChange"
+                       v-bind:current-page="pageParm.CurrentPage"
+                       v-bind:page-sizes="pageSizes"
+                       v-bind:page-size="pageParm.limit"
+                       layout="total, sizes, prev, pager, next, jumper"
+                       v-bind:total="page.TotalItems">
+        </el-pagination>
+    </div>
+</div>
+@section Scripts{
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: {
+                loading: true,
+                logBlockList: [],
+                page: [],
+                pageSizes: [30, 50, 100, 200],
+                pageParm: { CurrentPage: 1, limit: 30, orderField: "id", order: "desc" },
+                query: { Block: null, KeyValue: null },
+                screenHeight: document.body.clientHeight - 130
+            },
+            created: function () {
+                this.getPageList();
+                this.getLogBlockList();
+            },
+            mounted: function () {
+                window.onresize = () => {
+                    return (() => {
+                        this.screenHeight = document.body.clientHeight - 130
+                    })()
+                }
+            },
+            methods: {
+                getLogBlockList: function () {
+                    axios.post('/api/DropdownList/QueryLogBlock')
+                    .then(function (response) {
+                        var res = response.data;
+                        if (res.statusCode == 200) {
+                            app.logBlockList = res.data;
+                        }
+                        else {
+                            app.$message({
+                                showClose: true,
+                                message: res.message,
+                                type: 'error'
+                            });
+                        }
+                    })
+                    .catch(function (error) {
+
+                    })
+                },
+                getPageList: function () {
+                    this.loading = true;
+                    axios.post('/api/Log/GetPageList', { pageParm: this.pageParm, query: this.query })
+                    .then(function (response) {
+                        var res = response.data;
+                        if (res.statusCode == 200) {
+                            app.page = res.data;
+                            app.page.Items.forEach(item=> {
+                                item.LogContentObj = JSON.parse(item.LogContent);
+                            });
+                            console.log(app.page)
+                            setTimeout(() => {
+                                app.loading = false;
+                            }, 800);
+                        }
+                        else {
+                            app.$message({
+                                showClose: true,
+                                message: res.message,
+                                type: 'error'
+                            });
+                        }
+                    })
+                    .catch(function (error) {
+
+                    })
+                },
+                handleSizeChange(val) {
+                    this.pageParm.limit = val;
+                    this.pageParm.CurrentPage = 1;
+                    this.getPageList();
+                },
+                handleCurrentChange(val) {
+                    this.pageParm.CurrentPage = val;
+                    this.getPageList();
+                },
+                handleQuery() {
+                    this.pageParm.CurrentPage = 1;
+                    this.getPageList();
+                },
+                handleChangeSelect: function (value) {
+                    this.query.BuildingID = value[0] || null;
+                    this.query.HouseID = value[1] || null;
+                }
+            }
+        })
+    </script>
+}
+
+
+
+

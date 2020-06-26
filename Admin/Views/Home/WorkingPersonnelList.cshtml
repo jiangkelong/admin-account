@@ -1,0 +1,219 @@
+﻿
+@{
+    ViewBag.Title = "会员列表";
+}
+<div id="app" class="MainContainer">
+    <el-table v-bind:data="list"
+              v-loading="loading"
+              border
+              highlight-current-row
+              style="width: 100%"
+              v-bind:max-height="screenHeight">
+        <el-table-column prop="Name"
+                         label="姓 名">
+        </el-table-column>
+        <el-table-column prop="LoginName"
+                         label="账 号">
+        </el-table-column>
+        <el-table-column prop="RoleName"
+                         label="权 限">
+        </el-table-column>
+        <el-table-column fixed="right"
+                         width="160">
+            <template slot="header" slot-scope="scope">
+                操 作&nbsp;
+                <el-button type="text" style="padding:0; font-size:18px;" title="新增" @@click="handleAdd">
+                <i class="el-icon-circle-plus"></i>
+            </el-button>
+            </template>
+            <template slot-scope="scope">
+                <el-button size="mini"
+                           type="primary"
+                           @@click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+                <el-button size="mini"
+                           type="danger"
+                           @@click="handleDelete(scope.$index, scope.row)">删除</el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+    <el-dialog v-bind:title="dialogTitle" width="500px" v-bind:visible.sync="dialogFormVisible">
+        <el-form status-icon v-bind:rules="rules" ref="ruleForm" v-bind:model="model">
+            <el-form-item label="账 号" label-width="80px" prop="LoginName">
+                <el-input v-model="model.LoginName" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="密 码" label-width="80px" prop="Password">
+                <el-input type="password" v-model="model.Password" autocomplete="off" show-password></el-input>
+            </el-form-item>
+            <el-form-item label="姓 名" label-width="80px" prop="Name">
+                <el-input v-model="model.Name" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="权 限" label-width="80px" prop="RoleId">
+                <el-select v-model="model.RoleId">
+                    <el-option v-for="item in roleList"
+                               v-bind:key="item.RoleId"
+                               v-bind:label="item.RoleName"
+                               v-bind:value="item.RoleId">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @@click="save">提 交</el-button>
+        </div>
+    </el-dialog>
+</div>
+@section Scripts{
+    <script>
+        var temp = { MemberId: 0, MemberNo: null, MemberName: null, Tel: null };
+        var app = new Vue({
+            el: "#app",
+            data: {
+                loading: true,
+                model: JSON.parse(JSON.stringify(temp)),//临时对象
+                currentIndex: null,//当前行索引
+                dialogFormVisible: false,
+                action: 'add',
+                list: [],
+                roleList:[],
+                rules: {//表单验证规则
+                    LoginName: [
+                        { required: true, message: '请输入账号', trigger: 'blur' },
+                    ],
+                    Password: [
+                        { required: true, message: '请输入密码', trigger: 'blur' },
+                    ],
+                    Name: [
+                        { required: true, message: '请输入员工姓名', trigger: 'blur' },
+                    ],
+                    RoleId: [
+                        { required: true, message: '请选择权限', trigger: 'change' },
+                    ]
+                },
+                screenHeight: document.body.clientHeight - 80
+            },
+            created: function () {
+                this.getPageList();
+                this.getRoleList();
+            },
+            mounted: function () {
+                window.onresize = () => {
+                    return (() => {
+                        this.screenHeight = document.body.clientHeight - 80
+                    })()
+                }
+            },
+            computed: {
+                dialogTitle: function () {
+                    return this.action === 'add' ? '添 加' : '修 改';
+                }
+            },
+            methods: {
+                getPageList: function () {
+                    this.loading = true;
+                    this.$http.post('/api/Weapp/GetWorkingPersonnelList')
+                        .then(function (response) {
+                            app.list = response.data.data;
+                            setTimeout(() => {
+                                app.loading = false;
+                            }, 800);
+                        })
+                        .catch(function (error) {
+
+                        })
+                },
+                getRoleList: function () {
+                    this.$http.post('/api/Weapp/GetRoleList')
+                        .then(function (response) {
+                            app.roleList = response.data.data;
+                        })
+                        .catch(function (error) {
+
+                        })
+                },
+                handleAdd: function () {
+                    this.model = JSON.parse(JSON.stringify(temp));
+                    this.action = "add";
+                    this.dialogFormVisible = true;
+                },
+                handleEdit: function (index, row) {
+                    this.model = JSON.parse(JSON.stringify(row));
+                    this.currentIndex = index;
+                    this.action = "modify";
+                    this.dialogFormVisible = true;
+                },
+                handleDelete: function (index, row) {
+                    this.$confirm('是否确认删除？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        this.$http.get('/api/Weapp/DelWorkingPersonnel',
+                            {
+                                params: { id: row.Id }
+                            })
+                            .then(function (response) {
+                                var res = response.data;
+                                if (res.statusCode == 200) {
+                                    app.$message({
+                                        showClose: true,
+                                        message: '删除成功',
+                                        type: 'success'
+                                    });
+                                    app.getPageList();
+                                }
+                                else {
+                                    app.$message({
+                                        showClose: true,
+                                        message: res.message,
+                                        type: 'error'
+                                    });
+                                }
+                            })
+                    });
+                },
+                save: function () {
+                    var loading = this.$loading({
+                        lock: true,
+                        background: 'rgba(255, 255, 255, 0.5)'
+                    });
+                    this.$refs["ruleForm"].validate((valid) => {
+                        if (valid) {
+                            this.$http.post('/api/Weapp/SaveWorkingPersonnel', this.model)
+                                .then(function (response) {
+                                    var res = response.data;
+                                    if (res.statusCode == 200) {
+                                        app.$message({
+                                            showClose: true,
+                                            message: '提交成功',
+                                            type: 'success'
+                                        });
+                                        app.getPageList();
+                                        app.dialogFormVisible = false;
+                                        loading.close();
+                                    }
+                                    else {
+                                        loading.close();
+                                        app.$message({
+                                            showClose: true,
+                                            message: res.message,
+                                            type: 'error'
+                                        });
+                                    }
+                                })
+                        }
+                        else {
+                            loading.close();
+                        }
+                    });
+
+                }
+            }
+        })
+    </script>
+}
+
+
+
+
+

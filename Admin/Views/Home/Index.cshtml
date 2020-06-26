@@ -1,0 +1,306 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width" />
+    <title>力生桶装水客户账户管理系统</title>
+    @Styles.Render("~/Content/elementUI/css")
+    <link href="~/Content/css/index.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="mainApp" style="height: 100%;">
+        <el-container>
+            <el-header>
+                <el-row>
+                    <el-col v-bind:span="10" style="font-family:'楷体'">
+                        <h1>力生桶装水客户账户管理系统</h1>
+                        @*<img src="~/Content/Images/logo.png" height="58" />*@
+                    </el-col>
+                    <el-col v-bind:span="10">
+                        &nbsp;
+                    </el-col>
+                    <el-col v-bind:span="4" style="text-align:right;">
+                        <el-dropdown @@command="handleCommand" style="height:30px;margin-left:10px;">
+                            <span class="el-dropdown-link">
+                                您好，{{name}}
+                            </span>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item command="logout">注销</el-dropdown-item>
+                                <el-dropdown-item command="modifyPsw">修改密码</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                    </el-col>
+                </el-row>
+            </el-header>
+            <el-container>
+                <el-aside width="200px">
+                    <el-menu class="el-menu-vertical-demo" v-bind:default-openeds="defaultOpeneds" unique-opened background-color="#ebf1f6">
+                        <template v-for="item1 in navs">
+                            <el-submenu v-if="item1.Children" v-bind:index="item1.TreeID">
+                                <template slot="title">
+                                    <i class="el-icon-menu"></i>
+                                    <span>{{item1.Title}}</span>
+                                </template>
+                                <template v-for="item2 in item1.Children">
+                                    <el-submenu v-if="item2.Children" v-bind:index="item2.TreeID">
+                                        <template slot="title">
+                                            <i class="el-icon-menu"></i>
+                                            <span>{{item2.Title}}</span>
+                                        </template>
+                                        <template v-for="item3 in item2.Children">
+                                            <el-submenu v-if="item3.Children" v-bind:index="item3.TreeID">
+                                                <template slot="title">
+                                                    <i class="el-icon-menu"></i>
+                                                    <span>{{item3.Title}}</span>
+                                                </template>
+                                            </el-submenu>
+                                            <el-menu-item v-else v-bind:index="item3.TreeID" @@click="addTab(item3.Title,item3.TreeID,item3.Url)">
+                                                <i class="el-icon-location"></i>
+                                                <span slot="title">{{item3.Title}}</span>
+                                            </el-menu-item>
+                                        </template>
+                                    </el-submenu>
+                                    <el-menu-item v-else v-bind:index="item2.TreeID" @@click="addTab(item2.Title,item2.TreeID,item2.Url)">
+                                        <i class="el-icon-location"></i>
+                                        <span slot="title">{{item2.Title}}</span>
+                                    </el-menu-item>
+                                </template>
+                            </el-submenu>
+                            <el-menu-item v-else v-bind:index="item1.TreeID" @@click="addTab(item1.Title,item1.TreeID,item1.Url)">
+                                <i class="el-icon-location"></i>
+                                <span slot="title">{{item1.Title}}</span>
+                            </el-menu-item>
+                        </template>
+                    </el-menu>
+                </el-aside>
+                <el-main>
+                    <el-tabs v-model="editableTabsValue" class="full" type="card" @@tab-remove="removeTab">
+                        <el-tab-pane v-for="(item, index) in editableTabs" v-bind:key="item.name" v-bind:label="item.title" v-bind:name="item.name" v-bind:closable="item.closable">
+                            <iframe v-loading.fullscreen.lock="fullscreenLoading" element-loading-background="rgba(255, 255, 255, 0.3)"
+                                    v-bind:id="index" v-bind:src="item.content" name="content_frame" @@load="iframeLoad(this)" marginwidth=0 marginheight=0 width=100% height=100% frameborder=0></iframe>
+                        </el-tab-pane>
+                    </el-tabs>
+                </el-main>
+            </el-container>
+        </el-container>
+        <el-dialog title="修改密码" v-bind:visible.sync="dialogFormVisible">
+            <el-form v-bind:model="psw">
+                <el-form-item label="旧密码" label-width="100px">
+                    <el-input type="password" v-model="psw.oldPsw" placeholder="请输入旧密码" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-form>
+            <el-form v-bind:model="psw">
+                <el-form-item label="新密码" label-width="100px">
+                    <el-input type="password" v-model="psw.newPsw" placeholder="请输入新密码" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-form>
+            <el-form v-bind:model="psw">
+                <el-form-item label="确认新密码" label-width="100px">
+                    <el-input type="password" v-model="psw.newPswConfirm" placeholder="请再输入一次新密码" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @@click="dialogFormVisible = false">取 消</el-button>
+                <el-button type="primary" @@click="modifyPassword">提 交</el-button>
+            </div>
+        </el-dialog>
+    </div>
+    @Scripts.Render("~/bundles/staticJS")
+    <script src="~/Content/js/axios-custom.js"></script>
+    <script>
+        var mainApp = new Vue({
+            el: "#mainApp",
+            data: function () {
+                return {
+                    navs: null,
+                    editableTabsValue: '首页',
+                    editableTabs: [{
+                        title: '首页',
+                        name: '首页',
+                        closable: false,
+                        content: '/Home/Default'
+                    }],
+                    defaultOpeneds: [],//默认展开的菜单数组
+                    fullscreenLoading: false,
+                    dialogFormVisible: false,
+                    name:'',
+                    psw: {}//用于修改密码
+
+                }
+            },
+            created: function () {
+                this.name = localStorage.getItem("name");
+                var loading = this.$loading({
+                    lock: true,
+                    text: '正在加载功能菜单……',
+                    spinner: 'el-icon-loading',
+                    background: 'rgba(255, 255, 255, 1)'
+                });
+                //获取菜单
+                this.$http.post('/api/Admin/GetMenu')
+                    .then(function (response) {
+                        //console.log(response.data.data);
+                        mainApp.navs = response.data.data;
+                        if (mainApp.navs.length == 0) {
+                            mainApp.$confirm('该用户无权限', '提示', {
+                                confirmButtonText: '确定',
+                                type: 'warning'
+                            }).then(function () {
+                                window.top.location = "/Home/Login";
+                            })
+                            return;
+                        }
+                        mainApp.defaultOpeneds.push(mainApp.navs[0].TreeID);//第一个菜单默认展开
+                        setTimeout(() => {
+                            loading.close();
+                        }, 1000);
+                    })
+                    .catch(function (error) {
+
+                    })
+            },
+            methods: {
+                //打开选项卡
+                addTab: function (targetName, targetID, url) {
+                    var tabs = this.editableTabs;
+                    var exist = false;//标签是否已存在
+                    tabs.forEach(function (tab, index) {
+                        if (tab.name === targetID) {
+                            mainApp.editableTabsValue = targetID;
+                            exist = true;
+                            return;
+                        }
+                    });
+                    if (exist) return;//防止重复打开
+                    if (this.editableTabs.length >= 10) {//限制同时打开选项卡的数量
+                        this.$message({
+                            showClose: true,
+                            message: '最多只能同时打开10个选项卡',
+                            type: 'warning'
+                        });
+                        return;
+                    }
+                    //打开新的选项卡
+                    this.editableTabs.push({
+                        title: targetName,
+                        name: targetID,
+                        closable: true,
+                        content: url
+                    });
+                    this.editableTabsValue = targetID;
+                    //this.fullscreenLoading = true  //iframe加载过渡效果
+                },
+                //移除选项卡
+                removeTab: function (targetID) {
+                    //console.log(targetID);
+                    var tabs = this.editableTabs;
+                    var activeName = this.editableTabsValue;
+                    tabs.forEach(function (tab, index) {
+                        if (tab.name === targetID) {
+                            if (activeName === targetID) {
+                                var nextTab = tabs[index + 1] || tabs[index - 1];
+                                if (nextTab) {
+                                    activeName = nextTab.name;
+                                }
+                            }
+                            tabs.splice(index, 1);
+                        }
+                    });
+                    this.editableTabsValue = activeName;
+                    this.editableTabs = tabs;
+                },
+                //iframe加载完成后关闭过渡效果
+                iframeLoad: function (_frame) {
+                    //setTimeout(function () {
+                    //    mainApp.fullscreenLoading = false
+                    //}, 300)
+                },
+                //下拉菜单指令
+                handleCommand: function (command) {
+                    switch (command) {
+                        case "logout":
+                            this.$confirm('是否确定退出登录？', '提示', {
+                                confirmButtonText: '确定',
+                                cancelButtonText: '取消',
+                                type: 'warning'
+                            }).then(function () {
+                                localStorage.clear();
+                                window.location = "/Home/Login";
+                            });
+                            break;
+                        case "modifyPsw":
+                            this.psw = { oldPsw: "", newPsw: "", newPswConfirm: "" };
+                            this.dialogFormVisible = true;
+                            break;
+                    }
+                },
+                //修改密码
+                modifyPassword: function () {
+                    if (this.psw.oldPsw.trim() === "" || !this.psw.oldPsw.trim().match(/^[A-Za-z0-9]+$/)) {
+                        this.$message({
+                            showClose: true,
+                            message: '密码只能输入数字和字母',
+                            type: 'warning'
+                        });
+                    }
+                    else if (this.psw.newPsw.trim() === "" || !this.psw.newPsw.trim().match(/^[A-Za-z0-9]+$/)) {
+                        this.$message({
+                            showClose: true,
+                            message: '密码只能输入数字和字母',
+                            type: 'warning'
+                        });
+                    }
+                    else if (this.psw.newPswConfirm.trim() === "" || !this.psw.newPswConfirm.trim().match(/^[A-Za-z0-9]+$/)) {
+                        this.$message({
+                            showClose: true,
+                            message: '密码只能输入数字和字母',
+                            type: 'warning'
+                        });
+                    }
+                    else if (this.psw.newPswConfirm.trim() !== this.psw.newPsw.trim()) {
+                        this.$message({
+                            showClose: true,
+                            message: '两次输入的新密码不一致',
+                            type: 'warning'
+                        });
+                    }
+                    else {
+                        this.$http.post('/api/Admin/ChangePassword', { OldPassword: this.psw.oldPsw.trim(), NewPassword: this.psw.newPsw.trim() })
+                            .then(function (response) {
+                                var res = response.data;
+                                if (res.statusCode !== 200) {
+                                    mainApp.$message({
+                                        showClose: true,
+                                        message: res.message,
+                                        type: 'error'
+                                    });
+                                }
+                                else {
+                                    mainApp.$message({
+                                        showClose: true,
+                                        message: '修改密码成功',
+                                        type: 'success'
+                                    });
+                                    mainApp.dialogFormVisible = false;
+                                }
+                            })
+                            .catch(function (error) {
+                                mainApp.$message({
+                                    showClose: true,
+                                    message: res.message,
+                                    type: 'error'
+                                });
+                            })
+                    }
+                }
+            }
+        })
+    </script>
+</body>
+</html>

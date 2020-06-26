@@ -1,0 +1,64 @@
+﻿
+@{
+    ViewBag.Title = "FileList";
+}
+<div id="app" class="MainContainer">
+    <div v-if="isVisible">
+        <el-divider content-position="left">已上传文件列表</el-divider>
+        <el-table v-bind:data="files"
+                  v-bind:show-header="false"
+                  style="width: 500px">
+            <el-table-column prop="FileName">
+            </el-table-column>
+            <el-table-column fixed="right"
+                             width="70">
+                <template slot-scope="scope">
+                    <a v-bind:href="scope.row.Path" v-bind:download="scope.row.FileName">下载</a>
+                </template>
+            </el-table-column>
+        </el-table>
+    </div>
+</div>
+@section Scripts{
+    <script src="~/Content/js/app.js"></script>
+    <script>
+        var kind = QueryString("kind");
+        var keyValue = QueryString("keyValue");
+        var app = new Vue({
+            el: "#app",
+            data: {
+                isVisible: true,
+                uploadParm: { kind: null, keyValue: null },
+                files: []
+            },
+            created: function () {
+                if (kind && keyValue) {
+                    this.uploadParm.kind = decodeURIComponent(kind);
+                    this.uploadParm.keyValue = keyValue;
+                    this.getFileList();
+                }
+                else {
+                    this.$message({
+                        showClose: true,
+                        message: "参数缺失",
+                        type: 'warning'
+                    });
+                    this.isVisible = false;
+                }
+            },
+            methods: {
+                getFileList: function () {
+                    this.loading = true;
+                    axios.post('/api/FileHandler/GetFileList', this.uploadParm)
+                    .then(function (response) {
+                        app.files = response.data.data;
+                    })
+                    .catch(function (error) {
+
+                    })
+                }
+            }
+        })
+    </script>
+}
+

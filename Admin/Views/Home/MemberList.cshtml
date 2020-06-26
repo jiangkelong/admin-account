@@ -1,0 +1,351 @@
+﻿
+@{
+    ViewBag.Title = "会员列表";
+}
+<div id="app" class="MainContainer">
+    <el-row>
+        <el-col v-bind:span="10">
+            <el-form v-bind:inline="true" v-bind:model="pageParm" class="demo-form-inline">
+                <el-form-item label="关键字">
+                    <el-input v-model="pageParm.QueryWords" clearable placeholder="检索会员编号或名称"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" size="small" @@click="handleQuery">查 询</el-button>
+                </el-form-item>
+            </el-form>
+        </el-col>
+        <el-col v-bind:span="14" style="text-align:right;">
+            <el-button type="primary" size="small" @@click="handleAdd">添 加</el-button>
+            <el-button type="primary" size="small" onclick="window.location = '/Home/BatchAddMember'">批量添加</el-button>
+            <el-button type="primary" size="small" onclick="window.location = '/Home/BatchRecharge'">批量充值</el-button>
+        </el-col>
+    </el-row>
+
+    <el-table v-bind:data="page.Items"
+              v-loading="loading"
+              border
+              highlight-current-row
+              style="width: 100%"
+              v-bind:max-height="screenHeight">
+        <el-table-column prop="MemberNo"
+                         label="会员编号">
+        </el-table-column>
+        <el-table-column prop="MemberName"
+                         label="会员名称">
+        </el-table-column>
+        <el-table-column label="余 额">
+            <template slot-scope="scope">
+                <span v-if="scope.row.Balance_Money!=0">
+                    {{scope.row.Balance_Money}} 元
+                </span>
+            </template>
+        </el-table-column>
+        <el-table-column label="余 量">
+            <template slot-scope="scope">
+                <span v-if="scope.row.Balance_Num!=0">
+                    {{scope.row.Balance_Num}} 桶
+                </span>
+            </template>
+        </el-table-column>
+        <el-table-column prop="Tel"
+                         label="联系方式">
+        </el-table-column>
+        <el-table-column fixed="right"
+                         label="操 作"
+                         width="400">
+            <template slot-scope="scope">
+                <el-button size="mini"
+                           type="primary"
+                           @@click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+                <el-button size="mini"
+                           type="danger"
+                           @@click="handleDelete(scope.$index, scope.row)">删除</el-button>
+                <el-button size="mini"
+                           type="success"
+                           @@click="handleRecharge(scope.$index, scope.row)">充值</el-button>
+                <el-button size="mini"
+                           type="warning"
+                           @@click="handleCharging(scope.$index, scope.row)">收款</el-button>
+                <el-button size="mini"
+                           type="info"
+                           @@click="handleResetPassword(scope.$index, scope.row)">重置密码</el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+    <div class="paginationBlock">
+        <el-pagination @@size-change="handleSizeChange"
+                       @@current-change="handleCurrentChange"
+                       v-bind:current-page="pageParm.CurrentPage"
+                       v-bind:page-sizes="pageSizes"
+                       v-bind:page-size="pageParm.limit"
+                       layout="total, sizes, prev, pager, next, jumper"
+                       v-bind:total="page.TotalItems">
+        </el-pagination>
+    </div>
+    <el-dialog v-bind:title="dialogTitle" width="500px" v-bind:visible.sync="dialogFormVisible">
+        <el-form status-icon v-bind:rules="rules" ref="ruleForm" v-bind:model="member">
+            <el-form-item label="会员编号" label-width="80px" prop="MemberNo">
+                <el-input v-model="member.MemberNo" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="会员名称" label-width="80px" prop="MemberName">
+                <el-input v-model="member.MemberName" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="联系方式" label-width="80px">
+                <el-input v-model="member.Tel" autocomplete="off"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @@click="save">提 交</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog v-bind:title="dialogTitle2" width="500px" v-bind:visible.sync="dialogFormVisible2">
+        <el-form status-icon v-bind:model="charge">
+            <el-form-item label="金额(元)" label-width="80px">
+                <el-input type="number" v-model="charge.Money" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="数量(桶)" label-width="80px">
+                <el-input type="number" v-model="charge.Num" autocomplete="off"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible2 = false">取 消</el-button>
+            <el-button type="primary" @@click="saveCharge">提 交</el-button>
+        </div>
+    </el-dialog>
+</div>
+@section Scripts{
+    <script>
+        var temp = { MemberId: 0, MemberNo: null, MemberName: null, Tel: null };
+        var temp_charge = { MemberId:0, Money: null, Num: null,Type:null };
+        var app = new Vue({
+            el: "#app",
+            data: {
+                loading: true,
+                member: JSON.parse(JSON.stringify(temp)),//临时对象
+                currentIndex: null,//当前行索引
+                dialogFormVisible: false,
+                dialogFormVisible2: false,
+                dialogTitle: '添 加',
+                dialogTitle2: '充 值',
+                charge: JSON.parse(JSON.stringify(temp_charge)),
+                page: [],
+                pageSizes: [30, 50, 100],
+                pageParm: { CurrentPage: 1, Limit: 30, QueryWords: "" },
+                rules: {//表单验证规则
+                    MemberNo: [
+                        { required: true, message: '请输入会员编号', trigger: 'blur' },
+                    ],
+                    MemberName: [
+                        { required: true, message: '请输入会员名称', trigger: 'blur' },
+                    ]
+                },
+                screenHeight: document.body.clientHeight - 130
+            },
+            created: function () {
+                this.getPageList();
+            },
+            mounted: function () {
+                window.onresize = () => {
+                    return (() => {
+                        this.screenHeight = document.body.clientHeight - 130
+                    })()
+                }
+            },
+            methods: {
+                getPageList: function () {
+                    this.loading = true;
+                    this.$http.post('/api/Weapp/GetMemberList', this.pageParm)
+                        .then(function (response) {
+                            app.page = response.data.data;
+                            setTimeout(() => {
+                                app.loading = false;
+                            }, 800);
+                        })
+                        .catch(function (error) {
+
+                        })
+                },
+                handleSizeChange(val) {
+                    this.pageParm.limit = val;
+                    this.pageParm.CurrentPage = 1;
+                    this.getPageList();
+                },
+                handleCurrentChange(val) {
+                    this.pageParm.CurrentPage = val;
+                    this.getPageList();
+                },
+                handleQuery() {
+                    this.pageParm.CurrentPage = 1;
+                    this.getPageList();
+                },
+                handleAdd: function () {
+                    this.member = JSON.parse(JSON.stringify(temp));
+                    this.dialogTitle = "添 加";
+                    this.dialogFormVisible = true;
+                },
+                handleEdit: function (index, row) {
+                    this.member = JSON.parse(JSON.stringify(row));
+                    this.currentIndex = index;
+                    this.dialogTitle = "修 改";
+                    this.dialogFormVisible = true;
+                },
+                handleRecharge: function (index, row) {
+                    this.charge = JSON.parse(JSON.stringify(temp_charge));
+                    this.charge.MemberId = row.MemberId;
+                    this.charge.Type = "recharge";
+                    this.dialogTitle2 = "充 值";
+                    this.dialogFormVisible2 = true;
+                },
+                handleCharging: function (index, row) {
+                    this.charge = JSON.parse(JSON.stringify(temp_charge));
+                    this.charge.MemberId = row.MemberId;
+                    this.charge.Type = "charging";
+                    this.dialogTitle2 = "收 款";
+                    this.dialogFormVisible2 = true;
+                },
+                handleDelete: function (index, row) {
+                    this.$confirm('是否确认删除？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        this.$http.get('/api/Weapp/DelMember',
+                            {
+                                params: { id: row.MemberId }
+                            })
+                            .then(function (response) {
+                                var res = response.data;
+                                if (res.statusCode == 200) {
+                                    app.$message({
+                                        showClose: true,
+                                        message: '删除成功',
+                                        type: 'success'
+                                    });
+                                    app.getPageList();
+                                }
+                                else {
+                                    app.$message({
+                                        showClose: true,
+                                        message: res.message,
+                                        type: 'error'
+                                    });
+                                }
+                            })
+                    });
+                },
+                handleResetPassword: function (index, row) {
+                    this.$confirm('是否确认重置密码？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        this.$http.get('/api/Weapp/ResetMemberPassword',
+                            {
+                                params: { id: row.MemberId }
+                            })
+                            .then(function (response) {
+                                var res = response.data;
+                                if (res.statusCode == 200) {
+                                    app.$message({
+                                        showClose: true,
+                                        message: '重置成功',
+                                        type: 'success'
+                                    });
+                                }
+                                else {
+                                    app.$message({
+                                        showClose: true,
+                                        message: res.message,
+                                        type: 'error'
+                                    });
+                                }
+                            })
+                    });
+                },
+                save: function () {
+                    var loading = this.$loading({
+                        lock: true,
+                        background: 'rgba(255, 255, 255, 0.5)'
+                    });
+                    this.$refs["ruleForm"].validate((valid) => {
+                        if (valid) {
+                            this.$http.post('/api/Weapp/SaveMember', this.member)
+                                .then(function (response) {
+                                    var res = response.data;
+                                    if (res.statusCode == 200) {
+                                        app.$message({
+                                            showClose: true,
+                                            message: '提交成功',
+                                            type: 'success'
+                                        });
+                                        app.getPageList();
+                                        app.dialogFormVisible = false;
+                                        loading.close();
+                                    }
+                                    else {
+                                        loading.close();
+                                        app.$message({
+                                            showClose: true,
+                                            message: res.message,
+                                            type: 'error'
+                                        });
+                                    }
+                                })
+                        }
+                        else {
+                            loading.close();
+                        }
+                    });
+
+                },
+                saveCharge: function () {
+                    var loading = this.$loading({
+                        lock: true,
+                        background: 'rgba(255, 255, 255, 0.5)'
+                    });
+                    const money = parseFloat(this.charge.Money)
+                    const num = parseFloat(this.charge.Num)
+                    if (money < 0 || num < 0 || (isNaN(money) && isNaN(num)) || (money == 0 && isNaN(num)) || (num == 0 && isNaN(money))) {
+                        app.$message({
+                            showClose: true,
+                            message: '请填写有效数值',
+                            type: 'error'
+                        });
+                        loading.close();
+                        return;
+                    }
+                    this.charge.Money = this.charge.Money == null || isNaN(this.charge.Money) ? 0 : this.charge.Money
+                    this.charge.Num = this.charge.Num == null || isNaN(this.charge.Num) ? 0 : this.charge.Num
+                    this.$http.post('/api/Weapp/ChangeBalance', this.charge)
+                        .then(function (response) {
+                            var res = response.data;
+                            if (res.statusCode == 200) {
+                                app.$message({
+                                    showClose: true,
+                                    message: '提交成功',
+                                    type: 'success'
+                                });
+                                app.getPageList();
+                                app.dialogFormVisible2 = false;
+                                loading.close();
+                            }
+                            else {
+                                loading.close();
+                                app.$message({
+                                    showClose: true,
+                                    message: res.message,
+                                    type: 'error'
+                                });
+                            }
+                        })
+                }
+            }
+        })
+    </script>
+}
+
+
+
+
+

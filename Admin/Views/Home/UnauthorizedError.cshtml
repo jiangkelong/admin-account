@@ -1,0 +1,44 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>登录失效</title>
+    @*<link rel="icon" href="~/favicon.ico" type="image/x-ico" />*@
+    <style>
+        body{
+            background-image:url("../Content/Images/login-bg-5.jpg")
+        }
+    </style>
+</head>
+<body>
+    <div id="app" style="margin:200px auto;text-align:center;vertical-align:middle;"> 
+        登录凭证失效，{{times}}秒后自动跳转 <a href="/Home/Login" target="_top">登录</a>
+    </div>
+    @Scripts.Render("~/bundles/staticJS")
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: function () {
+                return {
+                    times:5
+                }
+            },
+            created: function () {
+                //5秒后自动跳转登录
+                setInterval(() => {
+                    this.times = this.times - 1;
+                    if (this.times == 0) {
+                        top.location = "/Home/Login";
+                    }
+                }, 1000);
+            }
+        })
+    </script>
+</body>
+</html>

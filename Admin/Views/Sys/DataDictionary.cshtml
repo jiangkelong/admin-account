@@ -1,0 +1,210 @@
+﻿@{
+    ViewBag.Title = "DataDictionary";
+}
+@section Styles{
+    <style>
+        .part-col
+        {
+            margin-top: 5px;
+        }
+    </style>
+}
+<div id="app" style="height: 100%;">
+    <el-row class="SubContainer">
+        <el-col v-bind:span="6">
+            <el-col v-bind:span="24">
+                <el-tag>属 性</el-tag>
+            </el-col>
+            <el-col v-bind:span="24" class="part-col">
+                <template v-for="(item,index) in flags">
+                    <div style="margin:0 0 5px 0;">
+                        <el-radio v-model="selectFlag" v-bind:label="item.Flag">{{item.Flag}}</el-radio>
+                    </div>
+                </template>
+            </el-col>
+        </el-col>
+        <el-col v-bind:span="8" >
+            <el-col v-bind:span="18">
+                <el-tag type="success">属性值</el-tag>
+            </el-col>
+            <el-col v-bind:span="6" style="text-align:right;padding-right: 10px;">
+                <el-button type="success" size="small" v-show="selectFlag!==null" @@click="handleAdd">添 加</el-button>
+            </el-col>
+            <el-col v-bind:span="24" class="part-col">
+                <el-table
+                v-bind:data="fields"
+                border
+                highlight-current-row
+                v-bind:show-header="false"
+                style="width: 100%">
+                <el-table-column
+                    prop="FieldValue"
+                    label="属性值">
+                </el-table-column>
+                <el-table-column
+                    fixed="right"
+                    width="160"
+                    align="right">
+                    <template slot-scope="scope">
+                        <el-button
+                            size="mini"
+                            @@click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+                        <el-button
+                            size="mini"
+                            type="danger"
+                            @@click="handleDelete(scope.$index, scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            </el-col>
+        </el-col>
+    </el-row>
+    <el-dialog v-bind:title="dialogTitle" v-bind:visible.sync="dialogFormVisible">
+        <el-form v-bind:model="field">
+            <el-form-item label="属 性" label-width="80px">
+                <el-input v-model="field.Flag" readOnly></el-input>
+            </el-form-item>
+            <el-form-item label="属性值" label-width="80px">
+                <el-input v-model="field.FieldValue" autocomplete="off"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @@click="save">提 交</el-button>
+        </div>
+    </el-dialog>
+</div>
+@section Scripts{
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: function () {
+                return {
+                    flags: [],//属性
+                    selectFlag: null,//当前选中的属性
+                    fields: [],//属性值集合
+                    field: {},//单个属性值
+                    dialogFormVisible: false,
+                    currentIndex: null,
+                    action: "add"
+                }
+            },
+            created: function () {
+                this.getFlags();
+            },
+            computed: {
+                dialogTitle: function () {
+                    return this.action === 'add' ? '新增条目' : '修改条目';
+                }
+            },
+            watch: {
+                selectFlag: function (val) {
+                    this.getFields();
+                }
+            },
+            methods: {
+                //获取可见属性
+                getFlags: function () {
+                    axios.post('/api/DataDictionary/GetFlags')
+                    .then(function (response) {
+                        app.flags = response.data.data;
+                    })
+                    .catch(function (error) {
+
+                    })
+                },
+                //获取属性值
+                getFields: function () {
+                    axios.post('/api/DataDictionary/GetFields', { flag: this.selectFlag })
+                    .then(function (response) {
+                        app.fields = response.data.data;
+                    })
+                    .catch(function (error) {
+
+                    })
+                },
+                handleAdd: function () {
+                    this.field = { id: 0, Flag: this.selectFlag, FieldValue: "" };
+                    this.action = "add";
+                    this.dialogFormVisible = true;
+                },
+                handleEdit: function (index, row) {
+                    this.field = JSON.parse(JSON.stringify(row));
+                    this.currentIndex = index;
+                    this.action = "modify";
+                    this.dialogFormVisible = true;
+                },
+                handleDelete: function (index, row) {
+                    if (this.fields.length === 1) {
+                        this.$message({
+                            showClose: true,
+                            message: "每个属性至少保留一个值",
+                            type: 'warning'
+                        });
+                        return;
+                    }
+                    this.$confirm('是否确认删除？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(function () {
+                        axios.post('/api/DataDictionary/Delete', { id: row.id })
+                            .then(function (response) {
+                                var res = response.data;
+                                if (res.statusCode == 200) {
+                                    app.$message({
+                                        showClose: true,
+                                        message: '删除成功',
+                                        type: 'success'
+                                    });
+                                    app.fields.splice(index, 1);//删除
+                                }
+                                else {
+                                    app.$message({
+                                        showClose: true,
+                                        message: res.message,
+                                        type: 'error'
+                                    });
+                                }
+                            })
+                    });
+                },
+                save: function () {
+                    if (this.field.FieldValue.trim() === "") {
+                        this.$message({
+                            showClose: true,
+                            message: '属性值不能为空',
+                            type: 'warning'
+                        });
+                        return;
+                    }
+                    axios.post('/api/DataDictionary/Edit', this.field)
+                        .then(function (response) {
+                            var res = response.data;
+                            if (res.statusCode == 200) {
+                                app.$message({
+                                    showClose: true,
+                                    message: '提交成功',
+                                    type: 'success'
+                                });
+                                if (app.action === 'add') {
+                                    app.fields.push(res.data);//数组头部插入
+                                }
+                                else {
+                                    app.fields.splice(app.currentIndex, 1, app.field);//替换
+                                }
+                                app.dialogFormVisible = false;
+                            }
+                            else {
+                                app.$message({
+                                    showClose: true,
+                                    message: res.message,
+                                    type: 'error'
+                                });
+                            }
+                        })
+                }
+            }
+        })
+    </script>
+}

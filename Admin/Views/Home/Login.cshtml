@@ -1,0 +1,109 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width" />
+    <title>系统登录</title>
+    @Styles.Render("~/Content/elementUI/css")
+    <link href="~/Content/css/login.css" rel="stylesheet" />
+</head>
+<body class="login-bg">
+    <div id="app" class="login-box">
+        <header>
+            <h1>后台管理系统</h1>
+        </header>
+        <div class="login-main">
+            <form id="form1">
+                <div class="form-item">
+                    <el-input placeholder="请输入账号" v-model="loginName" clearable>
+                        <template slot="prepend">
+                            账号：
+                        </template>
+                    </el-input>
+                </div>
+                <div class="form-item">
+                    <el-input type="password" placeholder="请输入密码" v-model="password" clearable>
+                        <template slot="prepend">
+                            密码：
+                        </template>
+                    </el-input>
+                </div>
+            </form>
+            <div class="form-item">
+                <el-button @@click="checkLogin">登&nbsp;&nbsp;录</el-button>
+            </div>
+        </div>
+    </div>
+    @Scripts.Render("~/bundles/staticJS")
+    <script src="~/Content/js/axios-custom.js"></script>
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: function () {
+                return {
+                    loginName: '',
+                    password: ''
+                }
+            },
+            methods: {
+                checkLogin: function () {
+                    if (this.loginName.trim() === "" || !this.loginName.trim().match(/^\w+$/)) {
+                        this.$message({
+                            showClose: true,
+                            message: '账号只能输入数字、字母和下划线',
+                            type: 'warning'
+                        });
+                    }
+                    else if (this.password.trim() === "" || !this.password.trim().match(/^[A-Za-z0-9]+$/)) {
+                        this.$message({
+                            showClose: true,
+                            message: '密码只能输入数字和字母',
+                            type: 'warning'
+                        });
+                    }
+                    else {
+                        this.$http.post('/api/Admin/Login', { 'loginName': this.loginName, 'password': this.password })
+                            .then(function (response) {
+                                var res = response.data;
+                                if (res.success) {
+                                    localStorage.setItem("userId", res.data.UserId);
+                                    localStorage.setItem("roleId", res.data.RoleId);
+                                    localStorage.setItem("name", res.data.Name);
+
+                                    var loading = app.$loading({
+                                        lock: true,
+                                        text: '登录成功，正在跳转……',
+                                        spinner: 'el-icon-loading',
+                                        background: 'rgba(255, 255, 255, 0.9)'
+                                    });
+                                    setTimeout(function () {
+                                        window.location = "/Home/Index";
+                                    }, 800);
+                                }
+                                else
+                                    app.$message({
+                                        showClose: true,
+                                        message: res.message,
+                                        type: 'error'
+                                    });
+                            })
+                            .catch(function (error) {
+                                app.$message({
+                                    showClose: true,
+                                    message: error.response.status + " : " + error.response.statusText,
+                                    type: 'error'
+                                });
+                            });
+                    }
+                }
+            }
+        })
+    </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+1、服务器安装AccessDatabaseEngine 2007
+2、应用程序池高级设置，启用32位程序设为true
+3、安装ASPState数据库
+asp.net SessionState的sqlserver模式的配置（根据实际情况修改数据库实例名称、用户名、密码）
+在C:\Windows\Microsoft.NET\Framework\v4.0.30319打开命令窗口，执行：
+aspnet_regsql.exe -ssadd -sstype c -d ASPState -S localhost -U sa -P sa

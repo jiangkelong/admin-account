@@ -1,0 +1,361 @@
+﻿
+@{
+    ViewBag.Title = "Users";
+}
+<div id="app" style="height: 100%;">
+    <el-row class="SubContainer">
+        <el-col v-bind:span="6">
+            <el-tree v-bind:data="treeL"
+                     v-bind:props="defaultProps"
+                     node-key="DepartmentID"
+                     highlight-current
+                     v-bind:expand-on-click-node="false"
+                     @@node-click="clickNode">
+                <span class="custom-tree-node" slot-scope="{ node, data }">
+                    <span>{{ node.label }}</span>
+                    <span>
+                        <el-button type="text"
+                                   size="mini"
+                                   v-if="data.DepartmentID!==-1"
+                                   @@click.stop="handleAdd(node, data)">
+                            添加用户
+                        </el-button>
+                    </span>
+                </span>
+            </el-tree>
+        </el-col>
+        <el-col v-bind:span="18">
+            <el-table v-bind:data="userList"
+                      border
+                      highlight-current-row
+                      style="width: 100%"
+                      v-bind:max-height="screenHeight">
+                <el-table-column prop="RealName"
+                                 fixed
+                                 label="姓名"
+                                 width="120">
+                </el-table-column>
+                <el-table-column prop="UserID"
+                                 label="用户ID"
+                                 width="80">
+                </el-table-column>
+                <el-table-column prop="UserName"
+                                 label="登录名"
+                                 width="120">
+                </el-table-column>
+                <el-table-column prop="DepartmentName"
+                                 label="部 门"
+                                 width="120">
+                </el-table-column>
+                <el-table-column prop="RoleName"
+                                 label="角 色"
+                                 width="120">
+                </el-table-column>
+                <el-table-column prop="Six"
+                                 label="性 别"
+                                 width="60">
+                </el-table-column>
+                <el-table-column prop="Telephone"
+                                 label="电 话"
+                                 width="120">
+                </el-table-column>
+                <el-table-column prop="CreatedOn"
+                                 label="创建时间"
+                                 width="200">
+                </el-table-column>
+                <el-table-column label="状 态"
+                                 width="90">
+                    <template slot-scope="scope">
+                        <el-switch v-model="scope.row.Status"
+                                   active-color="#13ce66"
+                                   inactive-color="#ff4949"
+                                   @@change="changeStatus(scope.row)">
+                        </el-switch>
+                    </template>
+                </el-table-column>
+                <el-table-column fixed="right"
+                                 label="操 作"
+                                 width="160">
+                    <template slot-scope="scope">
+                        <el-button size="mini"
+                                   @@click="handleEdit(scope.$index, scope.row)">修改</el-button>
+                        <el-button size="mini"
+                                   type="danger"
+                                   @@click="handleDelete(scope.$index, scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+    <el-dialog v-bind:title="dialogTitle" v-bind:visible.sync="dialogFormVisible">
+        <el-form v-bind:model="tempUser">
+            <el-col v-bind:span="12">
+                <el-form-item label="登录名" label-width="80px">
+                    <el-input v-model="tempUser.UserName" placeholder="请输入登录名" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-col>
+            <el-col v-bind:span="12">
+                <el-form-item label="登录密码" label-width="80px">
+                    <el-input type="password" placeholder="请输入登录密码" v-model="tempUser.Password" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-col>
+            <el-col v-bind:span="12">
+                <el-form-item label="姓 名" label-width="80px">
+                    <el-input v-model="tempUser.RealName" placeholder="请输入姓名" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-col>
+            <el-col v-bind:span="12">
+                <el-form-item label="所属机构" label-width="80px">
+                    <el-popover placement="bottom"
+                                title=""
+                                width="300"
+                                trigger="click"
+                                v-model="popoverDisplay">
+                        <el-tree v-bind:data="treeR"
+                                 v-bind:props="defaultProps"
+                                 node-key="DepartmentID"
+                                 v-bind:expand-on-click-node="false"
+                                 highlight-current
+                                 accordion
+                                 @@node-click="selectNode">
+                            <span class="custom-tree-node" slot-scope="{ node, data }">
+                                <span>{{ node.label }}</span>
+                            </span>
+                        </el-tree>
+                        <el-input slot="reference" v-model="tempUser.DepartmentName" readOnly></el-input>
+                    </el-popover>
+                </el-form-item>
+            </el-col>
+            <el-col v-bind:span="12">
+                <el-form-item label="角 色" label-width="80px">
+                    <el-select v-model="tempUser.RoleID" placeholder="请选择">
+                        <el-option v-for="item in roles"
+                                   v-bind:key="item.RoleID"
+                                   v-bind:label="item.RoleName"
+                                   v-bind:value="item.RoleID">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </el-col>
+            <el-col v-bind:span="12">
+                <el-form-item label="联系电话" label-width="80px">
+                    <el-input v-model="tempUser.Telephone" placeholder="请输入联系电话" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-col>
+            <el-col v-bind:span="12">
+                <el-form-item label="性 别" label-width="80px">
+                    <el-select v-model="tempUser.Six" placeholder="请选择">
+                        <el-option label="男"
+                                   value="男">
+                        </el-option>
+                        <el-option label="女"
+                                   value="女">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </el-col>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @@click="save">提 交</el-button>
+        </div>
+    </el-dialog>
+</div>
+@section Scripts{
+    <script>
+        var user = { UserID: 0, UserName: '', Password: '', RealName: '', DepartmentID: null, DepartmentName: '', RoleID: null, RoleName: '', Six: null, Telephone: '', Status: 1 };
+        var node = { DepartmentID: -1, DepartmentName: '所有用户', ParentID: 0, Telephone: '', Children: [] }
+        var app = new Vue({
+            el: "#app",
+            data: function () {
+                return {
+                    treeL: [],//左边的树
+                    treeR: [],//右边的树
+                    userList: [],
+                    roles: [],
+                    departID: -1,//选择的机构ID
+                    tempUser: JSON.parse(JSON.stringify(user)),//用户对象，用于编辑
+                    action: 'add',
+                    dialogFormVisible: false,
+                    popoverDisplay: false,
+                    defaultProps: {
+                        children: 'Children',
+                        label: 'DepartmentName'
+                    },
+                    screenHeight: document.body.clientHeight - 20
+                }
+            },
+            created: function () {
+                this.getTree();
+                this.getList();
+                this.getRoles();
+            },
+            mounted: function () {
+                window.onresize = () => {
+                    return (() => {
+                        this.screenHeight = document.body.clientHeight - 20
+                    })()
+                }
+            },
+            computed: {
+                dialogTitle: function () {
+                    return this.action === 'add' ? '新增用户' : '修改用户';
+                }
+            },
+            methods: {
+                //获取部门菜单
+                getTree: function () {
+                    axios.post('/api/Department/GetTree')
+                    .then(function (response) {
+                        //console.log(response.data.data);
+                        app.treeR = JSON.parse(JSON.stringify(response.data.data));
+                        app.treeL = response.data.data;
+                        app.treeL.unshift(node);//为左边的树增加一个根节点用来选择显示所有部门的用户
+                    })
+                    .catch(function (error) {
+
+                    })
+                },
+                //获取用户列表,departID=-1表示获取权限内所有用户
+                getList: function () {
+                    axios.post('/api/User/GetList', { departID: this.departID })
+                    .then(function (response) {
+                        //console.log(response.data.data);
+                        app.userList = response.data.data;
+                    })
+                    .catch(function (error) {
+
+                    })
+                },
+                //获取角色列表
+                getRoles: function () {
+                    axios.post('/api/Role/GetList')
+                    .then(function (response) {
+                        //console.log(response.data.data);
+                        app.roles = response.data.data;
+                    })
+                    .catch(function (error) {
+
+                    })
+                },
+                handleAdd: function (node, data) {
+                    this.tempUser = JSON.parse(JSON.stringify(user));
+                    this.tempUser.DepartmentID = data.DepartmentID;
+                    this.tempUser.DepartmentName = data.DepartmentName;
+                    this.action = "add";
+                    this.dialogFormVisible = true;
+                },
+                handleEdit: function (index, row) {
+                    this.tempUser = JSON.parse(JSON.stringify(row));
+                    this.action = "modify";
+                    this.dialogFormVisible = true;
+                },
+                handleDelete: function (index, row) {
+                    this.$confirm('此操作将会影响与该用户相关的数据的正常使用，建议禁用即可，是否继续？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(function () {
+                        axios.post('/api/User/Delete', { id: row.UserID })
+                            .then(function (response) {
+                                var res = response.data;
+                                if (res.statusCode == 200) {
+                                    app.$message({
+                                        showClose: true,
+                                        message: '删除成功',
+                                        type: 'success'
+                                    });
+                                    app.userList.splice(index, 1);//删除
+                                }
+                                else {
+                                    app.$message({
+                                        showClose: true,
+                                        message: res.message,
+                                        type: 'error'
+                                    });
+                                }
+                            })
+                    });
+                },
+                //提交保存
+                save: function () {
+                    if (this.tempUser.UserName.trim() === "" || !this.tempUser.UserName.trim().match(/^\w+$/)) {
+                        this.$message({
+                            showClose: true,
+                            message: '登录名只能输入数字、字母和下划线',
+                            type: 'warning'
+                        });
+                        return;
+                    }
+                    if (this.tempUser.Password.trim() === "" || !this.tempUser.Password.trim().match(/^[A-Za-z0-9]+$/)) {
+                        this.$message({
+                            showClose: true,
+                            message: '密码只能输入数字和字母',
+                            type: 'warning'
+                        });
+                        return;
+                    }
+                    if (this.tempUser.RealName.trim() === "") {
+                        this.$message({
+                            showClose: true,
+                            message: '姓名不能为空',
+                            type: 'warning'
+                        });
+                        return;
+                    }
+                    axios.post('/api/User/Edit', this.tempUser)
+                        .then(function (response) {
+                            var res = response.data;
+                            if (res.statusCode == 200) {
+                                app.$message({
+                                    showClose: true,
+                                    message: '提交成功',
+                                    type: 'success'
+                                });
+                                app.getList();
+                                app.dialogFormVisible = false;
+                            }
+                            else {
+                                app.$message({
+                                    showClose: true,
+                                    message: res.message,
+                                    type: 'error'
+                                });
+                            }
+                        })
+                },
+                //左侧选择机构
+                clickNode: function (data, node, self) {
+                    this.departID = data.DepartmentID;
+                    this.getList();
+                },
+                //编辑用户选择机构
+                selectNode: function (data, node, self) {
+                    this.tempUser.DepartmentID = data.DepartmentID;
+                    this.tempUser.DepartmentName = data.DepartmentName;
+                },
+                //改变状态
+                changeStatus: function (row) {
+                    axios.post('/api/User/ChangeStatus', { userID: row.UserID, status: row.Status })
+                        .then(function (response) {
+                            var res = response.data;
+                            if (res.statusCode !== 200) {
+                                app.$message({
+                                    showClose: true,
+                                    message: res.message,
+                                    type: 'error'
+                                });
+                                row.Status = !row.Status;
+                            }
+                        })
+                        .catch(function () {
+                            row.Status = !row.Status;
+                        })
+                }
+            }
+        })
+    </script>
+}
+
+
+
