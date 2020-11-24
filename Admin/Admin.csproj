@@ -144,6 +144,7 @@
     <Content Include="Content\Static\echarts\echarts.js" />
     <Content Include="Content\Static\echarts\v-charts.css" />
     <Content Include="Content\Static\echarts\v-charts.js" />
+    <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Static\axios\axios.js" />
     <Content Include="Content\Static\elementUI\index.css" />
